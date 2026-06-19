@@ -1,5 +1,7 @@
 const STORAGE_KEY = "offline_money_debt_tracker_records_v2";
 
+const toggleFormBtn = document.getElementById("toggleFormBtn");
+const formContainer = document.getElementById("formContainer");
 const form = document.getElementById("debtForm");
 const editId = document.getElementById("editId");
 const personName = document.getElementById("personName");
@@ -247,14 +249,17 @@ function renderWeeklyTotals() {
   weeklyTable.innerHTML = rows
     .map((data) => {
       const net = data.owedToMe - data.iOwe;
+      const netClass = net >= 0 ? 'positive' : 'negative';
+      const creditClass = data.owedToMe > 0 ? 'positive' : '';
+      const debitClass = data.iOwe > 0 ? 'negative' : '';
 
       return `
         <tr>
           <td><strong>${formatDate(data.week)}</strong></td>
           <td>${escapeHtml(data.name)}</td>
-          <td>${formatMoney(data.owedToMe)}</td>
-          <td>${formatMoney(data.iOwe)}</td>
-          <td><strong>${formatMoney(net)}</strong></td>
+          <td><strong class="${netClass}">${formatMoney(net)}</strong></td>
+          <td class="${creditClass}">${formatMoney(data.owedToMe)}</td>
+          <td class="${debitClass}">${formatMoney(data.iOwe)}</td>
         </tr>
       `;
     })
@@ -292,13 +297,16 @@ function renderPersonTotals() {
     .map((name) => {
       const totals = grouped[name];
       const net = totals.owedToMe - totals.iOwe;
+      const netClass = net >= 0 ? 'positive' : 'negative';
+      const creditClass = totals.owedToMe > 0 ? 'positive' : '';
+      const debitClass = totals.iOwe > 0 ? 'negative' : '';
 
       return `
         <tr>
           <td><strong>${escapeHtml(name)}</strong></td>
-          <td>${formatMoney(totals.owedToMe)}</td>
-          <td>${formatMoney(totals.iOwe)}</td>
-          <td><strong>${formatMoney(net)}</strong></td>
+          <td><strong class="${netClass}">${formatMoney(net)}</strong></td>
+          <td class="${creditClass}">${formatMoney(totals.owedToMe)}</td>
+          <td class="${debitClass}">${formatMoney(totals.iOwe)}</td>
         </tr>
       `;
     })
@@ -332,6 +340,8 @@ function editRecord(id) {
   statusField.value = record.status;
   notes.value = record.notes || "";
   saveBtn.textContent = "Update Record";
+  formContainer.classList.add("active");
+  toggleFormBtn.querySelector(".toggle-text").textContent = "- Add Record";
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -385,9 +395,16 @@ form.addEventListener("submit", (event) => {
   saveRecords();
   resetForm();
   renderAll();
+  formContainer.classList.remove("active");
 });
 
 resetBtn.addEventListener("click", resetForm);
+
+toggleFormBtn.addEventListener("click", () => {
+  formContainer.classList.toggle("active");
+  const isActive = formContainer.classList.contains("active");
+  toggleFormBtn.querySelector(".toggle-text").textContent = isActive ? "- Add Record" : "+ Add Record";
+});
 
 filterType.addEventListener("change", renderRecords);
 filterStatus.addEventListener("change", renderRecords);

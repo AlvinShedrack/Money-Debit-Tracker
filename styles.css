@@ -173,6 +173,55 @@ h1 {
   margin-bottom: 18px;
 }
 
+.form-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle-form-btn {
+  background: var(--primary);
+  color: white;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-weight: 750;
+  cursor: pointer;
+  font-size: 0.95rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 0;
+}
+
+.toggle-form-btn:hover {
+  background: var(--primary-dark);
+}
+
+.toggle-icon {
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+}
+
+.form-container {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.form-container.active {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+.form-container .panel-header {
+  margin-top: 18px;
+  margin-bottom: 18px;
+}
+
 .panel-header {
   margin-bottom: 18px;
 }
@@ -294,7 +343,7 @@ table {
 th,
 td {
   text-align: left;
-  padding: 14px 12px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
 }
@@ -341,6 +390,16 @@ th {
   background: #eff6ff;
   color: #1e40af;
   border-color: #93c5fd;
+}
+
+.positive {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.negative {
+  color: #dc2626;
+  font-weight: 600;
 }
 
 .action-buttons {
