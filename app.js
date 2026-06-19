@@ -174,7 +174,7 @@ function renderRecords() {
   const filtered = getFilteredRecords().sort((a, b) => b.date.localeCompare(a.date));
 
   if (!filtered.length) {
-    recordsTable.innerHTML = `<tr><td colspan="8" class="empty">No records found.</td></tr>`;
+    recordsTable.innerHTML = `<tr><td colspan="7" class="empty">No records found.</td></tr>`;
     return;
   }
 
@@ -191,7 +191,6 @@ function renderRecords() {
           <td><span class="badge ${typeClass}">${typeLabel}</span></td>
           <td><strong>${formatMoney(record.amount)}</strong></td>
           <td>${formatDate(record.date)}</td>
-          <td>${formatDate(getWeekStart(record.date))}</td>
           <td><span class="badge ${statusClass}">${statusLabel}</span></td>
           <td>${escapeHtml(record.notes || "-")}</td>
           <td>
