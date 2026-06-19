@@ -13,6 +13,8 @@ const resetBtn = document.getElementById("resetBtn");
 
 const recordsTable = document.getElementById("recordsTable");
 const weeklyTable = document.getElementById("weeklyTable");
+const personTotalsTable = document.getElementById("personTotalsTable");
+const personNamesList = document.getElementById("personNamesList");
 const filterType = document.getElementById("filterType");
 const filterStatus = document.getElementById("filterStatus");
 const searchInput = document.getElementById("searchInput");
@@ -202,6 +204,11 @@ function renderRecords() {
     .join("");
 }
 
+function updatePersonNameSuggestions() {
+  const names = [...new Set(records.map((record) => record.name.trim()).filter((name) => name))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  personNamesList.innerHTML = names.map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
+}
+
 function renderWeeklyTotals() {
   const grouped = {};
 
@@ -209,35 +216,88 @@ function renderWeeklyTotals() {
     if (record.status !== "open") return;
 
     const week = getWeekStart(record.date);
+    const key = `${week}||${record.name.trim()}`;
 
-    if (!grouped[week]) {
-      grouped[week] = { owedToMe: 0, iOwe: 0 };
+    if (!grouped[key]) {
+      grouped[key] = {
+        week,
+        name: record.name.trim(),
+        owedToMe: 0,
+        iOwe: 0
+      };
     }
 
     if (record.type === "owed_to_me") {
-      grouped[week].owedToMe += Number(record.amount);
+      grouped[key].owedToMe += Number(record.amount);
     } else {
-      grouped[week].iOwe += Number(record.amount);
+      grouped[key].iOwe += Number(record.amount);
     }
   });
 
-  const weeks = Object.keys(grouped).sort().reverse();
+  const rows = Object.values(grouped).sort((a, b) => {
+    if (a.week !== b.week) return b.week.localeCompare(a.week);
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+  });
 
-  if (!weeks.length) {
-    weeklyTable.innerHTML = `<tr><td colspan="4" class="empty">No unpaid weekly totals yet.</td></tr>`;
+  if (!rows.length) {
+    weeklyTable.innerHTML = `<tr><td colspan="5" class="empty">No unpaid weekly totals yet.</td></tr>`;
     return;
   }
 
-  weeklyTable.innerHTML = weeks
-    .map((week) => {
-      const data = grouped[week];
+  weeklyTable.innerHTML = rows
+    .map((data) => {
       const net = data.owedToMe - data.iOwe;
 
       return `
         <tr>
-          <td><strong>${formatDate(week)}</strong></td>
+          <td><strong>${formatDate(data.week)}</strong></td>
+          <td>${escapeHtml(data.name)}</td>
           <td>${formatMoney(data.owedToMe)}</td>
           <td>${formatMoney(data.iOwe)}</td>
+          <td><strong>${formatMoney(net)}</strong></td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderPersonTotals() {
+  const grouped = {};
+
+  records.forEach((record) => {
+    if (record.status !== "open") return;
+
+    const name = record.name.trim();
+    if (!name) return;
+
+    if (!grouped[name]) {
+      grouped[name] = { owedToMe: 0, iOwe: 0 };
+    }
+
+    if (record.type === "owed_to_me") {
+      grouped[name].owedToMe += Number(record.amount);
+    } else {
+      grouped[name].iOwe += Number(record.amount);
+    }
+  });
+
+  const people = Object.keys(grouped).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+  if (!people.length) {
+    personTotalsTable.innerHTML = `<tr><td colspan="4" class="empty">No unpaid person totals yet.</td></tr>`;
+    return;
+  }
+
+  personTotalsTable.innerHTML = people
+    .map((name) => {
+      const totals = grouped[name];
+      const net = totals.owedToMe - totals.iOwe;
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(name)}</strong></td>
+          <td>${formatMoney(totals.owedToMe)}</td>
+          <td>${formatMoney(totals.iOwe)}</td>
           <td><strong>${formatMoney(net)}</strong></td>
         </tr>
       `;
@@ -249,6 +309,8 @@ function renderAll() {
   renderSummary();
   renderRecords();
   renderWeeklyTotals();
+  renderPersonTotals();
+  updatePersonNameSuggestions();
 }
 
 function resetForm() {

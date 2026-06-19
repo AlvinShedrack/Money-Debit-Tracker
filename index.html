@@ -71,7 +71,8 @@
 
             <label>
               Person Name
-              <input id="personName" type="text" placeholder="Example: John Doe" required />
+              <input id="personName" list="personNamesList" type="text" placeholder="Example: John Doe" required />
+              <datalist id="personNamesList"></datalist>
             </label>
 
             <label>
@@ -205,12 +206,34 @@
             <thead>
               <tr>
                 <th>Week Starting</th>
+                <th>Person</th>
                 <th>People who borrowed from me</th>
                 <th>People I borrowed from</th>
                 <th>Net</th>
               </tr>
             </thead>
             <tbody id="weeklyTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Person Totals</h2>
+          <p>Overall outstanding totals for each person.</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>People who borrowed from me</th>
+                <th>People I borrowed from</th>
+                <th>Net</th>
+              </tr>
+            </thead>
+            <tbody id="personTotalsTable"></tbody>
           </table>
         </div>
       </section>
