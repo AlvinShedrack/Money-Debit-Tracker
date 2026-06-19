@@ -30,6 +30,14 @@ money-debt-tracker-pwa/
 4. Click **Open with Live Server**.
 5. The app will open in your browser.
 
+Alternatively, from a terminal you can run a simple HTTP server:
+
+```bash
+# from the project folder
+python -m http.server 8000
+# then open http://localhost:8000 in your browser
+```
+
 ## Install on Android
 
 1. Open the Live Server URL in Chrome.
@@ -52,3 +60,18 @@ money-debt-tracker-pwa/
 ## Important
 
 The data is stored on the device/browser using localStorage. If you clear browser data, records may be deleted. Use **Export JSON** for backup.
+
+## Quick test checklist
+
+1. Open the app in a browser (Live Server or `python -m http.server`).
+2. Add a record:
+    - `Person Name`: e.g. "John Doe"
+    - `Amount`: enter a positive number
+    - `Date`: pick today or another date
+    - `Type`: choose "This person borrowed from me" or "I owe this person"
+    - `Status`: choose "Not paid" (internally `open`) or "Paid"
+3. Click **Save Record** — the record should appear in the **Saved Records** table.
+4. Confirm the **Records** count and summary totals at the top update accordingly.
+5. Use **Export JSON** to download a backup, and **Import JSON** to restore it.
+
+If anything doesn't appear after saving, open the browser console (F12) and check for errors; report them here and I'll help fix them.

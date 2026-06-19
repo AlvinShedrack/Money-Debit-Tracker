@@ -26,7 +26,7 @@
       <div>
         <p class="eyebrow">Offline Personal Finance Tool</p>
         <h1>Money Debt Tracker</h1>
-        <p class="subtitle">Track people who demand you and people you demand.</p>
+        <p class="subtitle">Track people who owe you and people you owe.</p>
       </div>
 
       <button id="installBtn" class="install-btn hidden">Install App</button>
@@ -35,14 +35,14 @@
     <main>
       <section class="summary-grid">
         <article class="summary-card incoming">
-          <span>People demand me</span>
-          <strong id="totaldemanddToMe">UGX 0</strong>
+          <span>People borrowed from me</span>
+          <strong id="totalOwedToMe">UGX 0</strong>
           <small>Total money you should receive</small>
         </article>
 
         <article class="summary-card outgoing">
-          <span>I demand people</span>
-          <strong id="totalIdemand">UGX 0</strong>
+          <span>I borrowed from people</span>
+          <strong id="totalIOwe">UGX 0</strong>
           <small>Total money you should pay</small>
         </article>
 
@@ -63,7 +63,7 @@
         <section class="panel form-panel">
           <div class="panel-header">
             <h2>Add Record</h2>
-            <p>Enter who demand, amount, and date.</p>
+            <p>Enter person, amount, and date.</p>
           </div>
 
           <form id="debtForm">
@@ -80,22 +80,22 @@
             </label>
 
             <label>
-              Date demand
+              Date
               <input id="borrowDate" type="date" required />
             </label>
 
             <label>
               Type
               <select id="debtType" required>
-                <option value="demandd_to_me">This person borrowed from me</option>
-                <option value="i_demand">I demand from this person</option>
+                <option value="owed_to_me">This person borrowed from me</option>
+                <option value="i_owe">I borrowed from this person</option>
               </select>
             </label>
 
             <label>
               Status
               <select id="status" required>
-                <option value="Not paid">Not paid</option>
+                <option value="open">Not paid</option>
                 <option value="paid">Paid</option>
               </select>
             </label>
@@ -123,8 +123,8 @@
               Filter
               <select id="filterType">
                 <option value="all">All records</option>
-                <option value="demandd_to_me">People who demand me</option>
-                <option value="i_demand">People I demand</option>
+                <option value="owed_to_me">People who borrowed from me</option>
+                <option value="i_owe">People I borrowed from</option>
               </select>
             </label>
 
@@ -142,11 +142,11 @@
             <h3>This Week</h3>
             <div class="weekly-row">
               <span>Expected In</span>
-              <strong id="weekdemanddToMe">UGX 0</strong>
+              <strong id="weekOwedToMe">UGX 0</strong>
             </div>
             <div class="weekly-row">
               <span>Expected Out</span>
-              <strong id="weekIdemand">UGX 0</strong>
+              <strong id="weekIOwe">UGX 0</strong>
             </div>
             <div class="weekly-row total">
               <span>Weekly Net</span>

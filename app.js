@@ -132,7 +132,7 @@ function renderRecords() {
     .map((record) => {
       const typeLabel = record.type === "owed_to_me" ? "Demands me" : "I demand";
       const typeClass = record.type === "owed_to_me" ? "in" : "out";
-      const statusLabel = record.status === "Not paid" ? "Not paid" : "Paid";
+      const statusLabel = record.status === "open" ? "Not paid" : "Paid";
 
       return `
         <tr>
