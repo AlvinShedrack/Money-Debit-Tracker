@@ -517,7 +517,11 @@ th {
 
   .table-wrap {
     width: 100%;
-    overflow: visible;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+    margin: 0 -14px;
+    padding: 0 14px;
   }
 
   .badge {
