@@ -29,7 +29,53 @@ borrowDate.valueAsDate = new Date();
 
 function loadRecords() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+    // Normalize older records to current schema/values
+    const normalized = raw.map((r) => {
+      const record = Object.assign({}, r);
+
+      // Normalize status: accept 'Not paid', 'not paid', 'open' -> 'open'; 'paid' -> 'paid'
+      if (typeof record.status === 'string') {
+        const s = record.status.trim().toLowerCase();
+        if (s === 'paid') record.status = 'paid';
+        else record.status = 'open';
+      } else {
+        record.status = 'open';
+      }
+
+      // Normalize type values
+      if (typeof record.type === 'string') {
+        const t = record.type.trim().toLowerCase();
+        if (t === 'owed_to_me' || t === 'demandd_to_me' || t === 'people_owe_me' || t === 'borrowed_from_me') {
+          record.type = 'owed_to_me';
+        } else if (t === 'i_owe' || t === 'i_demand' || t === 'i borrowed' || t === 'i borrowed from') {
+          record.type = 'i_owe';
+        } else {
+          // default to owed_to_me for safety
+          record.type = 'owed_to_me';
+        }
+      } else {
+        record.type = 'owed_to_me';
+      }
+
+      // Ensure amount is number and date is string
+      record.amount = Number(record.amount) || 0;
+      record.date = record.date || new Date().toISOString().slice(0, 10);
+      record.name = record.name || '';
+      record.notes = record.notes || '';
+
+      return record;
+    });
+
+    // If normalization changed anything, persist back
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    } catch (e) {
+      // ignore write errors
+    }
+
+    return normalized;
   } catch (error) {
     console.error("Could not read local records", error);
     return [];
@@ -130,9 +176,10 @@ function renderRecords() {
 
   recordsTable.innerHTML = filtered
     .map((record) => {
-      const typeLabel = record.type === "owed_to_me" ? "Demands me" : "I demand";
+      const typeLabel = record.type === "owed_to_me" ? "Owes me" : "I owe";
       const typeClass = record.type === "owed_to_me" ? "in" : "out";
       const statusLabel = record.status === "open" ? "Not paid" : "Paid";
+      const statusClass = record.status === "open" ? "not-paid" : "paid";
 
       return `
         <tr>
@@ -141,7 +188,7 @@ function renderRecords() {
           <td><strong>${formatMoney(record.amount)}</strong></td>
           <td>${formatDate(record.date)}</td>
           <td>${formatDate(getWeekStart(record.date))}</td>
-          <td><span class="badge ${record.status}">${statusLabel}</span></td>
+          <td><span class="badge ${statusClass}">${statusLabel}</span></td>
           <td>${escapeHtml(record.notes || "-")}</td>
           <td>
             <div class="action-buttons">
@@ -177,7 +224,7 @@ function renderWeeklyTotals() {
   const weeks = Object.keys(grouped).sort().reverse();
 
   if (!weeks.length) {
-    weeklyTable.innerHTML = `<tr><td colspan="4" class="empty">No open weekly totals yet.</td></tr>`;
+    weeklyTable.innerHTML = `<tr><td colspan="4" class="empty">No unpaid weekly totals yet.</td></tr>`;
     return;
   }
 

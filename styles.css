@@ -325,7 +325,7 @@ th {
   color: #9a3412;
 }
 
-.badge.open {
+.badge.not-paid {
   background: #fef3c7;
   color: #92400e;
 }
