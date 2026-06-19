@@ -309,30 +309,38 @@ th {
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  justify-content: center;
+  padding: 7px 12px;
   border-radius: 999px;
-  font-weight: 800;
-  font-size: 0.78rem;
+  font-weight: 850;
+  font-size: 0.77rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1.5px solid;
 }
 
 .badge.in {
-  background: #dcfce7;
-  color: #166534;
+  background: #ecfdf5;
+  color: #0d6e4f;
+  border-color: #86efac;
 }
 
 .badge.out {
-  background: #ffedd5;
-  color: #9a3412;
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fbbf24;
 }
 
 .badge.not-paid {
-  background: #fef3c7;
-  color: #92400e;
+  background: #fffaeb;
+  color: #a16207;
+  border-color: #fcd34d;
 }
 
 .badge.paid {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #eff6ff;
+  color: #1e40af;
+  border-color: #93c5fd;
 }
 
 .action-buttons {
