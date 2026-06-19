@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Money Debt Tracker</title>
+  <meta name="description" content="Offline debt and borrowing tracker" />
+  <meta name="theme-color" content="#0f766e" />
+
+  <!-- iPhone/iPad home screen support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Debt Tracker" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="icon" type="image/png" href="assets/icon-192.png" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Offline Personal Finance Tool</p>
+        <h1>Money Debt Tracker</h1>
+        <p class="subtitle">Track people who demand you and people you demand.</p>
+      </div>
+
+      <button id="installBtn" class="install-btn hidden">Install App</button>
+    </header>
+
+    <main>
+      <section class="summary-grid">
+        <article class="summary-card incoming">
+          <span>People demand me</span>
+          <strong id="totaldemanddToMe">UGX 0</strong>
+          <small>Total money you should receive</small>
+        </article>
+
+        <article class="summary-card outgoing">
+          <span>I demand people</span>
+          <strong id="totalIdemand">UGX 0</strong>
+          <small>Total money you should pay</small>
+        </article>
+
+        <article class="summary-card net">
+          <span>Net balance</span>
+          <strong id="netBalance">UGX 0</strong>
+          <small>Positive means you are expecting more money</small>
+        </article>
+
+        <article class="summary-card count">
+          <span>Records</span>
+          <strong id="recordCount">0</strong>
+          <small>Total saved transactions</small>
+        </article>
+      </section>
+
+      <section class="layout">
+        <section class="panel form-panel">
+          <div class="panel-header">
+            <h2>Add Record</h2>
+            <p>Enter who demand, amount, and date.</p>
+          </div>
+
+          <form id="debtForm">
+            <input type="hidden" id="editId" />
+
+            <label>
+              Person Name
+              <input id="personName" type="text" placeholder="Example: John Doe" required />
+            </label>
+
+            <label>
+              Amount
+              <input id="amount" type="number" min="0" step="0.01" placeholder="Example: 5000" required />
+            </label>
+
+            <label>
+              Date demand
+              <input id="borrowDate" type="date" required />
+            </label>
+
+            <label>
+              Type
+              <select id="debtType" required>
+                <option value="demandd_to_me">This person borrowed from me</option>
+                <option value="i_demand">I demand from this person</option>
+              </select>
+            </label>
+
+            <label>
+              Status
+              <select id="status" required>
+                <option value="Not paid">Not paid</option>
+                <option value="paid">Paid</option>
+              </select>
+            </label>
+
+            <label>
+              Notes
+              <textarea id="notes" rows="3" placeholder="Optional note, reason, payment method, etc."></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button type="submit" class="primary-btn" id="saveBtn">Save Record</button>
+              <button type="button" class="secondary-btn" id="resetBtn">Clear</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Analysis</h2>
+            <p>Weekly totals and current balance.</p>
+          </div>
+
+          <div class="filters">
+            <label>
+              Filter
+              <select id="filterType">
+                <option value="all">All records</option>
+                <option value="demandd_to_me">People who demand me</option>
+                <option value="i_demand">People I demand</option>
+              </select>
+            </label>
+
+            <label>
+              Status
+              <select id="filterStatus">
+                <option value="all">All status</option>
+                <option value="Not paid">Not paid only</option>
+                <option value="paid">Paid only</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="weekly-box">
+            <h3>This Week</h3>
+            <div class="weekly-row">
+              <span>Expected In</span>
+              <strong id="weekdemanddToMe">UGX 0</strong>
+            </div>
+            <div class="weekly-row">
+              <span>Expected Out</span>
+              <strong id="weekIdemand">UGX 0</strong>
+            </div>
+            <div class="weekly-row total">
+              <span>Weekly Net</span>
+              <strong id="weekNet">UGX 0</strong>
+            </div>
+          </div>
+
+          <div class="tools">
+            <button id="exportBtn" class="secondary-btn">Export JSON</button>
+            <label class="import-label">
+              Import JSON
+              <input id="importFile" type="file" accept="application/json" />
+            </label>
+            <button id="clearAllBtn" class="danger-btn">Delete All</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-header table-header">
+          <div>
+            <h2>Saved Records</h2>
+            <p>All records are stored offline on this device.</p>
+          </div>
+
+          <input id="searchInput" type="search" placeholder="Search name or notes..." />
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Week</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="recordsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Weekly Totals</h2>
+          <p>Grouped automatically by week starting on Monday.</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Week Starting</th>
+                <th>People who demand Me</th>
+                <th>I demand People</th>
+                <th>Net</th>
+              </tr>
+            </thead>
+            <tbody id="weeklyTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

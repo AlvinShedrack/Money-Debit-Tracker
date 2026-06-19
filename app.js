@@ -1,0 +1,355 @@
+const STORAGE_KEY = "offline_money_debt_tracker_records_v1";
+
+const form = document.getElementById("debtForm");
+const editId = document.getElementById("editId");
+const personName = document.getElementById("personName");
+const amount = document.getElementById("amount");
+const borrowDate = document.getElementById("borrowDate");
+const debtType = document.getElementById("debtType");
+const statusField = document.getElementById("status");
+const notes = document.getElementById("notes");
+const saveBtn = document.getElementById("saveBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+const recordsTable = document.getElementById("recordsTable");
+const weeklyTable = document.getElementById("weeklyTable");
+const filterType = document.getElementById("filterType");
+const filterStatus = document.getElementById("filterStatus");
+const searchInput = document.getElementById("searchInput");
+
+const installBtn = document.getElementById("installBtn");
+const exportBtn = document.getElementById("exportBtn");
+const importFile = document.getElementById("importFile");
+const clearAllBtn = document.getElementById("clearAllBtn");
+
+let records = loadRecords();
+let deferredPrompt = null;
+
+borrowDate.valueAsDate = new Date();
+
+function loadRecords() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch (error) {
+    console.error("Could not read local records", error);
+    return [];
+  }
+}
+
+function saveRecords() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+function formatMoney(value) {
+  return new Intl.NumberFormat("en-UG", {
+    style: "currency",
+    currency: "UGX",
+    maximumFractionDigits: 0
+  }).format(Number(value || 0));
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  return new Date(value + "T00:00:00").toLocaleDateString("en-KE", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
+}
+
+function getWeekStart(dateString) {
+  const date = new Date(dateString + "T00:00:00");
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(date.setDate(diff));
+  return monday.toISOString().slice(0, 10);
+}
+
+function isCurrentWeek(dateString) {
+  return getWeekStart(dateString) === getWeekStart(new Date().toISOString().slice(0, 10));
+}
+
+function getFilteredRecords() {
+  const type = filterType.value;
+  const status = filterStatus.value;
+  const search = searchInput.value.trim().toLowerCase();
+
+  return records.filter((record) => {
+    const typeMatch = type === "all" || record.type === type;
+    const statusMatch = status === "all" || record.status === status;
+    const searchMatch =
+      !search ||
+      record.name.toLowerCase().includes(search) ||
+      (record.notes || "").toLowerCase().includes(search);
+
+    return typeMatch && statusMatch && searchMatch;
+  });
+}
+
+function calculateTotals(sourceRecords) {
+  return sourceRecords.reduce(
+    (totals, record) => {
+      if (record.status !== "open") return totals;
+
+      if (record.type === "owed_to_me") {
+        totals.owedToMe += Number(record.amount);
+      }
+
+      if (record.type === "i_owe") {
+        totals.iOwe += Number(record.amount);
+      }
+
+      return totals;
+    },
+    { owedToMe: 0, iOwe: 0 }
+  );
+}
+
+function renderSummary() {
+  const openTotals = calculateTotals(records);
+  const currentWeekRecords = records.filter((record) => record.status === "open" && isCurrentWeek(record.date));
+  const weekTotals = calculateTotals(currentWeekRecords);
+
+  document.getElementById("totalOwedToMe").textContent = formatMoney(openTotals.owedToMe);
+  document.getElementById("totalIOwe").textContent = formatMoney(openTotals.iOwe);
+  document.getElementById("netBalance").textContent = formatMoney(openTotals.owedToMe - openTotals.iOwe);
+  document.getElementById("recordCount").textContent = records.length;
+
+  document.getElementById("weekOwedToMe").textContent = formatMoney(weekTotals.owedToMe);
+  document.getElementById("weekIOwe").textContent = formatMoney(weekTotals.iOwe);
+  document.getElementById("weekNet").textContent = formatMoney(weekTotals.owedToMe - weekTotals.iOwe);
+}
+
+function renderRecords() {
+  const filtered = getFilteredRecords().sort((a, b) => b.date.localeCompare(a.date));
+
+  if (!filtered.length) {
+    recordsTable.innerHTML = `<tr><td colspan="8" class="empty">No records found.</td></tr>`;
+    return;
+  }
+
+  recordsTable.innerHTML = filtered
+    .map((record) => {
+      const typeLabel = record.type === "owed_to_me" ? "Demands me" : "I demand";
+      const typeClass = record.type === "owed_to_me" ? "in" : "out";
+      const statusLabel = record.status === "Not paid" ? "Not paid" : "Paid";
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(record.name)}</strong></td>
+          <td><span class="badge ${typeClass}">${typeLabel}</span></td>
+          <td><strong>${formatMoney(record.amount)}</strong></td>
+          <td>${formatDate(record.date)}</td>
+          <td>${formatDate(getWeekStart(record.date))}</td>
+          <td><span class="badge ${record.status}">${statusLabel}</span></td>
+          <td>${escapeHtml(record.notes || "-")}</td>
+          <td>
+            <div class="action-buttons">
+              <button class="icon-btn" onclick="editRecord('${record.id}')">Edit</button>
+              <button class="icon-btn delete" onclick="deleteRecord('${record.id}')">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderWeeklyTotals() {
+  const grouped = {};
+
+  records.forEach((record) => {
+    if (record.status !== "open") return;
+
+    const week = getWeekStart(record.date);
+
+    if (!grouped[week]) {
+      grouped[week] = { owedToMe: 0, iOwe: 0 };
+    }
+
+    if (record.type === "owed_to_me") {
+      grouped[week].owedToMe += Number(record.amount);
+    } else {
+      grouped[week].iOwe += Number(record.amount);
+    }
+  });
+
+  const weeks = Object.keys(grouped).sort().reverse();
+
+  if (!weeks.length) {
+    weeklyTable.innerHTML = `<tr><td colspan="4" class="empty">No open weekly totals yet.</td></tr>`;
+    return;
+  }
+
+  weeklyTable.innerHTML = weeks
+    .map((week) => {
+      const data = grouped[week];
+      const net = data.owedToMe - data.iOwe;
+
+      return `
+        <tr>
+          <td><strong>${formatDate(week)}</strong></td>
+          <td>${formatMoney(data.owedToMe)}</td>
+          <td>${formatMoney(data.iOwe)}</td>
+          <td><strong>${formatMoney(net)}</strong></td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderAll() {
+  renderSummary();
+  renderRecords();
+  renderWeeklyTotals();
+}
+
+function resetForm() {
+  form.reset();
+  editId.value = "";
+  borrowDate.valueAsDate = new Date();
+  saveBtn.textContent = "Save Record";
+}
+
+function editRecord(id) {
+  const record = records.find((item) => item.id === id);
+  if (!record) return;
+
+  editId.value = record.id;
+  personName.value = record.name;
+  amount.value = record.amount;
+  borrowDate.value = record.date;
+  debtType.value = record.type;
+  statusField.value = record.status;
+  notes.value = record.notes || "";
+  saveBtn.textContent = "Update Record";
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function deleteRecord(id) {
+  const confirmed = confirm("Delete this record?");
+  if (!confirmed) return;
+
+  records = records.filter((record) => record.id !== id);
+  saveRecords();
+  renderAll();
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const cleanName = personName.value.trim();
+  const cleanAmount = Number(amount.value);
+
+  if (!cleanName || cleanAmount <= 0 || !borrowDate.value) {
+    alert("Please enter a valid name, amount, and date.");
+    return;
+  }
+
+  const record = {
+    id: editId.value || crypto.randomUUID(),
+    name: cleanName,
+    amount: cleanAmount,
+    date: borrowDate.value,
+    type: debtType.value,
+    status: statusField.value,
+    notes: notes.value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (editId.value) {
+    records = records.map((item) => (item.id === editId.value ? record : item));
+  } else {
+    records.push(record);
+  }
+
+  saveRecords();
+  resetForm();
+  renderAll();
+});
+
+resetBtn.addEventListener("click", resetForm);
+
+filterType.addEventListener("change", renderRecords);
+filterStatus.addEventListener("change", renderRecords);
+searchInput.addEventListener("input", renderRecords);
+
+exportBtn.addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(records, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `money-debt-tracker-${new Date().toISOString().slice(0, 10)}.json`;
+  anchor.click();
+
+  URL.revokeObjectURL(url);
+});
+
+importFile.addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const imported = JSON.parse(await file.text());
+
+    if (!Array.isArray(imported)) {
+      alert("Invalid import file.");
+      return;
+    }
+
+    records = imported;
+    saveRecords();
+    renderAll();
+    alert("Records imported successfully.");
+  } catch (error) {
+    alert("Could not import this file.");
+  }
+
+  importFile.value = "";
+});
+
+clearAllBtn.addEventListener("click", () => {
+  const confirmed = confirm("This will permanently delete all records saved on this device. Continue?");
+  if (!confirmed) return;
+
+  records = [];
+  saveRecords();
+  renderAll();
+});
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredPrompt = event;
+  installBtn.classList.remove("hidden");
+});
+
+installBtn.addEventListener("click", async () => {
+  if (!deferredPrompt) return;
+
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+
+  deferredPrompt = null;
+  installBtn.classList.add("hidden");
+});
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((error) => {
+      console.error("Service worker registration failed", error);
+    });
+  });
+}
+
+renderAll();
