@@ -1,4 +1,4 @@
-const STORAGE_KEY = "offline_money_debt_tracker_records_v1";
+const STORAGE_KEY = "offline_money_debt_tracker_records_v2";
 
 const form = document.getElementById("debtForm");
 const editId = document.getElementById("editId");
