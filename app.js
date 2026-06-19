@@ -178,7 +178,7 @@ function renderRecords() {
 
   recordsTable.innerHTML = filtered
     .map((record) => {
-      const typeLabel = record.type === "owed_to_me" ? "Borrowed from me" : "I borrowed from";
+      const typeLabel = record.type === "owed_to_me" ? "Credit" : "Debit";
       const typeClass = record.type === "owed_to_me" ? "in" : "out";
       const statusLabel = record.status === "open" ? "Not paid" : "Paid";
       const statusClass = record.status === "open" ? "not-paid" : "paid";
