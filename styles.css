@@ -368,6 +368,21 @@ th {
   border: 1.5px solid;
 }
 
+.app-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.96);
+  color: #dc2626;
+  font-weight: 800;
+  text-align: center;
+  font-size: 0.95rem;
+  padding: 14px 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  z-index: 999;
+}
+
 .badge.in {
   background: #ecfdf5;
   color: #0d6e4f;
