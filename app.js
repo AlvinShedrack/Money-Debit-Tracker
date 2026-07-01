@@ -625,8 +625,9 @@ function scheduleAutoSync() {
 
   clearTimeout(syncTimer);
 
-  syncTimer = setTimeout(() => {
-    syncRecordsToSupabase({ silent: true });
+  syncTimer = setTimeout(async () => {
+    await pullRecordsFromSupabase({ silent: true });
+    await syncRecordsToSupabase({ silent: true });
   }, 1200);
 }
 
@@ -701,11 +702,90 @@ async function syncRecordsToSupabase(options = {}) {
 }
 
 if (syncBtn) {
-  syncBtn.addEventListener("click", () => {
-    syncRecordsToSupabase({ silent: false });
+  syncBtn.addEventListener("click", async () => {
+    await pullRecordsFromSupabase({ silent: true });
+    await syncRecordsToSupabase({ silent: false });
   });
 }
+async function pullRecordsFromSupabase(options = {}) {
+  const silent = options.silent === true;
 
+  if (!supabaseClient) {
+    if (!silent) alert("Supabase is not configured correctly.");
+    return;
+  }
+
+  if (!navigator.onLine) {
+    if (!silent) alert("You are offline. Connect to internet first.");
+    return;
+  }
+
+  try {
+    setSyncButtonState(true, "Loading");
+
+    const { data, error } = await supabaseClient
+      .from("debt_records")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    const cloudRecords = (data || []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      amount: Number(row.amount) || 0,
+      date: row.borrow_date,
+      type: row.debt_type,
+      status: row.status,
+      notes: row.notes || "",
+      updatedAt: row.updated_at || row.synced_at || new Date().toISOString()
+    }));
+
+    records = mergeRecords(records, cloudRecords);
+    saveRecords();
+    renderAll();
+
+    setSyncButtonState(false, "Synced");
+
+    setTimeout(() => {
+      setSyncButtonState(false, "Sync");
+    }, 2500);
+
+    if (!silent) {
+      alert(`Downloaded ${cloudRecords.length} record(s) from Supabase.`);
+    }
+  } catch (error) {
+    console.error("Supabase download failed", error);
+    setSyncButtonState(false, "Retry");
+
+    if (!silent) {
+      alert("Could not download records from Supabase.");
+    }
+  }
+}
+function mergeRecords(localRecords, cloudRecords) {
+  const merged = new Map();
+
+  [...localRecords, ...cloudRecords].forEach((record) => {
+    const existing = merged.get(record.id);
+
+    if (!existing) {
+      merged.set(record.id, record);
+      return;
+    }
+
+    const existingTime = new Date(existing.updatedAt || 0).getTime();
+    const recordTime = new Date(record.updatedAt || 0).getTime();
+
+    if (recordTime >= existingTime) {
+      merged.set(record.id, record);
+    }
+  });
+
+  return Array.from(merged.values());
+}
 window.addEventListener("online", () => {
   setSyncButtonState(false, "Syncing");
   scheduleAutoSync();
