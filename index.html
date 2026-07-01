@@ -93,8 +93,8 @@
             <label>
               Type
               <select id="debtType" required>
-                <option value="owed_to_me">This person borrowed from me</option>
                 <option value="i_owe">I owe this person</option>
+                <option value="owed_to_me">This person borrowed from me</option>
               </select>
             </label>
 
@@ -133,6 +133,7 @@
                   <th>Net</th>
                   <th>Credit</th>
                   <th>Debit</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody id="personTotalsTable"></tbody>
@@ -177,6 +178,7 @@
                 <th>Net</th>
                 <th>Credit</th>
                 <th>Debit</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody id="weeklyTable"></tbody>
@@ -245,6 +247,12 @@
      <footer class="app-footer">Developed by Alvin Shedrack © 2026</footer>
   </div>
 
+  <button id="syncBtn" class="sync-fab" type="button" aria-label="Sync records to Supabase">
+    <span class="sync-icon">↻</span>
+    <span class="sync-text">Sync</span>
+  </button>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>

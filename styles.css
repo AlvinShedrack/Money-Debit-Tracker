@@ -562,3 +562,57 @@ th {
     font-size: 0.65rem;
   }
 }
+
+.sync-fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 18px;
+  background: #0f766e;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow: 0 12px 30px rgba(15, 118, 110, 0.35);
+  cursor: pointer;
+}
+
+.sync-fab:active {
+  transform: scale(0.96);
+}
+
+.sync-fab:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.sync-icon {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.sync-fab.syncing .sync-icon {
+  animation: syncSpin 0.8s linear infinite;
+}
+
+@keyframes syncSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Show only on mobile */
+@media (max-width: 768px) {
+  .sync-fab {
+    display: flex;
+  }
+}

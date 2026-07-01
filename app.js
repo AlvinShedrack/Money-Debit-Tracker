@@ -25,7 +25,29 @@ const installBtn = document.getElementById("installBtn");
 const exportBtn = document.getElementById("exportBtn");
 const importFile = document.getElementById("importFile");
 const clearAllBtn = document.getElementById("clearAllBtn");
+const syncBtn = document.getElementById("syncBtn");
 
+const SUPABASE_URL = "https://swrizekajinyyucuqcxh.supabase.co";
+const SUPABASE_PUBLIC_KEY = "sb_publishable_VvZphd8GnAJ4Ui5dsKIaTQ_Dt0KkKgL";
+
+const DEVICE_ID_KEY = "offline_money_debt_tracker_device_id";
+
+const supabaseClient = window.supabase
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY)
+  : null;
+
+function getDeviceId() {
+  let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, deviceId);
+  }
+
+  return deviceId;
+}
+
+const deviceId = getDeviceId();
 let records = loadRecords();
 let deferredPrompt = null;
 
@@ -237,20 +259,20 @@ function renderWeeklyTotals() {
 
   const rows = Object.values(grouped).sort((a, b) => {
     if (a.week !== b.week) return b.week.localeCompare(a.week);
-    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
   });
 
   if (!rows.length) {
-    weeklyTable.innerHTML = `<tr><td colspan="5" class="empty">No unpaid weekly totals yet.</td></tr>`;
+    weeklyTable.innerHTML = `<tr><td colspan="6" class="empty">No unpaid weekly totals yet.</td></tr>`;
     return;
   }
 
   weeklyTable.innerHTML = rows
     .map((data) => {
       const net = data.owedToMe - data.iOwe;
-      const netClass = net >= 0 ? 'positive' : 'negative';
-      const creditClass = data.owedToMe > 0 ? 'positive' : '';
-      const debitClass = data.iOwe > 0 ? 'negative' : '';
+      const netClass = net >= 0 ? "positive" : "negative";
+      const creditClass = data.owedToMe > 0 ? "positive" : "";
+      const debitClass = data.iOwe > 0 ? "negative" : "";
 
       return `
         <tr>
@@ -259,6 +281,15 @@ function renderWeeklyTotals() {
           <td><strong class="${netClass}">${formatMoney(net)}</strong></td>
           <td class="${creditClass}">${formatMoney(data.owedToMe)}</td>
           <td class="${debitClass}">${formatMoney(data.iOwe)}</td>
+          <td>
+            <button 
+              class="icon-btn paid-action"
+              data-action="week-paid"
+              data-person="${escapeHtml(data.name)}"
+              data-week="${data.week}">
+              Mark Paid
+            </button>
+          </td>
         </tr>
       `;
     })
@@ -285,10 +316,12 @@ function renderPersonTotals() {
     }
   });
 
-  const people = Object.keys(grouped).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const people = Object.keys(grouped).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
 
   if (!people.length) {
-    personTotalsTable.innerHTML = `<tr><td colspan="4" class="empty">No unpaid person totals yet.</td></tr>`;
+    personTotalsTable.innerHTML = `<tr><td colspan="5" class="empty">No unpaid person totals yet.</td></tr>`;
     return;
   }
 
@@ -296,9 +329,9 @@ function renderPersonTotals() {
     .map((name) => {
       const totals = grouped[name];
       const net = totals.owedToMe - totals.iOwe;
-      const netClass = net >= 0 ? 'positive' : 'negative';
-      const creditClass = totals.owedToMe > 0 ? 'positive' : '';
-      const debitClass = totals.iOwe > 0 ? 'negative' : '';
+      const netClass = net >= 0 ? "positive" : "negative";
+      const creditClass = totals.owedToMe > 0 ? "positive" : "";
+      const debitClass = totals.iOwe > 0 ? "negative" : "";
 
       return `
         <tr>
@@ -306,6 +339,14 @@ function renderPersonTotals() {
           <td><strong class="${netClass}">${formatMoney(net)}</strong></td>
           <td class="${creditClass}">${formatMoney(totals.owedToMe)}</td>
           <td class="${debitClass}">${formatMoney(totals.iOwe)}</td>
+          <td>
+            <button 
+              class="icon-btn paid-action"
+              data-action="person-paid"
+              data-person="${escapeHtml(name)}">
+              Mark Paid
+            </button>
+          </td>
         </tr>
       `;
     })
@@ -352,8 +393,67 @@ function deleteRecord(id) {
   records = records.filter((record) => record.id !== id);
   saveRecords();
   renderAll();
+  scheduleAutoSync();
+}
+function markPersonPaid(person) {
+  const confirmed = confirm(`Mark all unpaid records for ${person} as paid?`);
+  if (!confirmed) return;
+
+  const now = new Date().toISOString();
+
+  records = records.map((record) => {
+    if (
+      record.status === "open" &&
+      record.name.trim().toLowerCase() === person.trim().toLowerCase()
+    ) {
+      return {
+        ...record,
+        status: "paid",
+        updatedAt: now
+      };
+    }
+
+    return record;
+  });
+
+  saveRecords();
+  renderAll();
+
+  if (typeof scheduleAutoSync === "function") {
+    scheduleAutoSync();
+  }
 }
 
+function markPersonWeekPaid(person, week) {
+  const confirmed = confirm(`Mark all unpaid records for ${person} in this week as paid?`);
+  if (!confirmed) return;
+
+  const now = new Date().toISOString();
+
+  records = records.map((record) => {
+    const samePerson =
+      record.name.trim().toLowerCase() === person.trim().toLowerCase();
+
+    const sameWeek = getWeekStart(record.date) === week;
+
+    if (record.status === "open" && samePerson && sameWeek) {
+      return {
+        ...record,
+        status: "paid",
+        updatedAt: now
+      };
+    }
+
+    return record;
+  });
+
+  saveRecords();
+  renderAll();
+
+  if (typeof scheduleAutoSync === "function") {
+    scheduleAutoSync();
+  }
+}
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -395,6 +495,7 @@ form.addEventListener("submit", (event) => {
   resetForm();
   renderAll();
   formContainer.classList.remove("active");
+  scheduleAutoSync();
 });
 
 resetBtn.addEventListener("click", resetForm);
@@ -408,7 +509,23 @@ toggleFormBtn.addEventListener("click", () => {
 filterType.addEventListener("change", renderRecords);
 filterStatus.addEventListener("change", renderRecords);
 searchInput.addEventListener("input", renderRecords);
+personTotalsTable.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-action='person-paid']");
+  if (!button) return;
 
+  const person = button.dataset.person;
+  markPersonPaid(person);
+});
+
+weeklyTable.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-action='week-paid']");
+  if (!button) return;
+
+  const person = button.dataset.person;
+  const week = button.dataset.week;
+
+  markPersonWeekPaid(person, week);
+});
 exportBtn.addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(records, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -436,14 +553,19 @@ importFile.addEventListener("change", async (event) => {
     records = imported;
     saveRecords();
     renderAll();
+
+    if (typeof scheduleAutoSync === "function") {
+      scheduleAutoSync();
+    }
+
     alert("Records imported successfully.");
   } catch (error) {
+    console.error("Import failed", error);
     alert("Could not import this file.");
+  } finally {
+    importFile.value = "";
   }
-
-  importFile.value = "";
 });
-
 clearAllBtn.addEventListener("click", () => {
   const confirmed = confirm("This will permanently delete all records saved on this device. Continue?");
   if (!confirmed) return;
@@ -451,6 +573,7 @@ clearAllBtn.addEventListener("click", () => {
   records = [];
   saveRecords();
   renderAll();
+  scheduleAutoSync();
 });
 
 window.addEventListener("beforeinstallprompt", (event) => {
@@ -476,5 +599,127 @@ if ("serviceWorker" in navigator) {
     });
   });
 }
+let syncInProgress = false;
+let syncTimer = null;
 
+function setSyncButtonState(isSyncing, text) {
+  if (!syncBtn) return;
+
+  const syncText = syncBtn.querySelector(".sync-text");
+
+  syncBtn.disabled = isSyncing;
+  syncBtn.classList.toggle("syncing", isSyncing);
+
+  if (syncText) {
+    syncText.textContent = text;
+  }
+}
+
+function scheduleAutoSync() {
+  if (!supabaseClient) return;
+
+  if (!navigator.onLine) {
+    setSyncButtonState(false, "Offline");
+    return;
+  }
+
+  clearTimeout(syncTimer);
+
+  syncTimer = setTimeout(() => {
+    syncRecordsToSupabase({ silent: true });
+  }, 1200);
+}
+
+async function syncRecordsToSupabase(options = {}) {
+  const silent = options.silent === true;
+
+  if (!supabaseClient) {
+    if (!silent) alert("Supabase is not configured correctly.");
+    return;
+  }
+
+  if (!navigator.onLine) {
+    setSyncButtonState(false, "Offline");
+    if (!silent) alert("You are offline. Records will sync when internet is available.");
+    return;
+  }
+
+  if (syncInProgress) return;
+
+  if (!records.length) {
+    setSyncButtonState(false, "Sync");
+    if (!silent) alert("There are no records to sync.");
+    return;
+  }
+
+  try {
+    syncInProgress = true;
+    setSyncButtonState(true, "Syncing");
+
+    const payload = records.map((record) => ({
+      id: record.id,
+      device_id: deviceId,
+      name: record.name,
+      amount: Number(record.amount) || 0,
+      borrow_date: record.date,
+      debt_type: record.type,
+      status: record.status,
+      notes: record.notes || "",
+      updated_at: record.updatedAt || new Date().toISOString(),
+      synced_at: new Date().toISOString()
+    }));
+
+    const { error } = await supabaseClient
+      .from("debt_records")
+      .upsert(payload, { onConflict: "id" });
+
+    if (error) {
+      throw error;
+    }
+
+    localStorage.setItem("last_supabase_sync_at", new Date().toISOString());
+
+    setSyncButtonState(false, "Synced");
+
+    setTimeout(() => {
+      setSyncButtonState(false, "Sync");
+    }, 2500);
+
+    if (!silent) {
+      alert(`Sync complete. ${payload.length} record(s) uploaded to Supabase.`);
+    }
+  } catch (error) {
+    console.error("Supabase sync failed", error);
+    setSyncButtonState(false, "Retry");
+
+    if (!silent) {
+      alert("Sync failed. Check your Supabase URL, key, table, and RLS policy.");
+    }
+  } finally {
+    syncInProgress = false;
+  }
+}
+
+if (syncBtn) {
+  syncBtn.addEventListener("click", () => {
+    syncRecordsToSupabase({ silent: false });
+  });
+}
+
+window.addEventListener("online", () => {
+  setSyncButtonState(false, "Syncing");
+  scheduleAutoSync();
+});
+
+window.addEventListener("offline", () => {
+  setSyncButtonState(false, "Offline");
+});
+
+window.addEventListener("load", () => {
+  if (navigator.onLine) {
+    scheduleAutoSync();
+  } else {
+    setSyncButtonState(false, "Offline");
+  }
+});
 renderAll();
